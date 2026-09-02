@@ -8,15 +8,27 @@
       "storeUrl": "https://americanpeptides.us",
       "dashboardUrl": "https://partners.americanpeptides.us/dashboard",
       "loginUrl": null,
-      "commissionRate": 0.10,
+      "commissionRate": 0.1,
       "cookieWindowDays": 30,
       "currency": "USD",
       "adapter": "manual",
       "passwordEnv": "AMERICAN_PEPTIDES_PASSWORD",
       "loginIdentity": "email",
-      "platform": { "suspected": "goaffpro-or-uppromote", "confirmed": null },
-      "tracking": { "type": "referral_link", "param": null },
-      "expectedMetrics": { "clicks": true, "conversions": true, "earnings": true, "unpaidEarnings": true, "paidEarnings": true },
+      "platform": {
+        "suspected": "goaffpro-or-uppromote",
+        "confirmed": null
+      },
+      "tracking": {
+        "type": "referral_link",
+        "param": null
+      },
+      "expectedMetrics": {
+        "clicks": true,
+        "conversions": true,
+        "earnings": true,
+        "unpaidEarnings": true,
+        "paidEarnings": true
+      },
       "notes": "Dedicated partners. subdomain. Platform unconfirmed until discovery run."
     },
     {
@@ -25,16 +37,28 @@
       "storeUrl": "https://ameanopeptides.com",
       "dashboardUrl": "https://partners.ameanopeptides.com/",
       "loginUrl": null,
-      "commissionRate": 0.10,
+      "commissionRate": 0.1,
       "cookieWindowDays": null,
       "currency": "USD",
       "adapter": "manual",
       "passwordEnv": "AMEANO_PEPTIDES_PASSWORD",
       "loginIdentity": "email",
-      "platform": { "suspected": "goaffpro-or-uppromote", "confirmed": null },
-      "tracking": { "type": "referral_link", "param": "ref" },
-      "expectedMetrics": { "clicks": true, "conversions": true, "earnings": true, "unpaidEarnings": true, "paidEarnings": true },
-      "notes": "Dedicated partners. subdomain, ?ref= param. Cookie window unknown — confirm in the affiliate terms."
+      "platform": {
+        "suspected": "goaffpro-or-uppromote",
+        "confirmed": null
+      },
+      "tracking": {
+        "type": "referral_link",
+        "param": "ref"
+      },
+      "expectedMetrics": {
+        "clicks": true,
+        "conversions": true,
+        "earnings": true,
+        "unpaidEarnings": true,
+        "paidEarnings": true
+      },
+      "notes": "Dedicated partners. subdomain, ?ref= param. Cookie window unknown \u2014 confirm in the affiliate terms."
     },
     {
       "key": "idun_peptides",
@@ -42,17 +66,29 @@
       "storeUrl": "https://idunpeptides.com",
       "dashboardUrl": "https://idunpeptides.com/affiliate-area/",
       "loginUrl": "https://idunpeptides.com/affiliate-area/",
-      "commissionRate": 0.20,
+      "commissionRate": 0.2,
       "cookieWindowDays": 90,
       "currency": "USD",
-      "adapter": "manual",
-      "candidateAdapter": "affiliatewp",
+      "adapter": "affiliatewp",
       "passwordEnv": "IDUN_PEPTIDES_PASSWORD",
       "loginIdentity": "username",
-      "platform": { "suspected": "affiliatewp", "confirmed": null },
-      "tracking": { "type": "referral_link", "param": "ref", "affiliateIdIsEmail": true },
-      "expectedMetrics": { "clicks": true, "conversions": true, "earnings": true, "unpaidEarnings": true, "paidEarnings": true },
-      "notes": "AffiliateWP on WooCommerce (/affiliate-area/ is its default path). Referral link uses the email address as affiliate ID, so it arrives URL-encoded (%40) — decode before comparing."
+      "platform": {
+        "suspected": "affiliatewp",
+        "confirmed": null
+      },
+      "tracking": {
+        "type": "referral_link",
+        "param": "ref",
+        "affiliateIdIsEmail": true
+      },
+      "expectedMetrics": {
+        "clicks": true,
+        "conversions": true,
+        "earnings": true,
+        "unpaidEarnings": true,
+        "paidEarnings": true
+      },
+      "notes": "AffiliateWP on WooCommerce (/affiliate-area/ is its default path). Referral link uses the email address as affiliate ID, so it arrives URL-encoded (%40) \u2014 decode before comparing. Adapter written against AffiliateWP's stock templates and NOT yet verified against the live site: run `npm run discover -- --program=idun_peptides` and read the TODO(verify) list at the top of src/adapters/affiliatewp.js."
     },
     {
       "key": "synthesis_peptides",
@@ -60,15 +96,27 @@
       "storeUrl": "https://synthesispeptides.co",
       "dashboardUrl": "https://synthesispeptides.co/account",
       "loginUrl": "https://synthesispeptides.co/account",
-      "commissionRate": 0.10,
+      "commissionRate": 0.1,
       "cookieWindowDays": null,
       "currency": "USD",
       "adapter": "manual",
       "passwordEnv": "SYNTHESIS_PEPTIDES_PASSWORD",
       "loginIdentity": "email",
-      "platform": { "suspected": "custom", "confirmed": null },
-      "tracking": { "type": "referral_link", "param": "synthaff" },
-      "expectedMetrics": { "clicks": true, "conversions": true, "earnings": true, "unpaidEarnings": true, "paidEarnings": true },
+      "platform": {
+        "suspected": "custom",
+        "confirmed": null
+      },
+      "tracking": {
+        "type": "referral_link",
+        "param": "synthaff"
+      },
+      "expectedMetrics": {
+        "clicks": true,
+        "conversions": true,
+        "earnings": true,
+        "unpaidEarnings": true,
+        "paidEarnings": true
+      },
       "notes": "Custom build, tracking param ?synthaff=. Stats may live behind a tab on /account rather than a dedicated page."
     },
     {
@@ -77,16 +125,28 @@
       "storeUrl": "https://blueridgepeptides.com",
       "dashboardUrl": "https://blueridgepeptides.com/affiliates/",
       "loginUrl": "https://blueridgepeptides.com/affiliates/",
-      "commissionRate": 0.10,
+      "commissionRate": 0.1,
       "cookieWindowDays": null,
       "currency": "USD",
       "adapter": "manual",
       "passwordEnv": "BLUE_RIDGE_PEPTIDES_PASSWORD",
       "loginIdentity": "email",
-      "platform": { "suspected": "unknown", "confirmed": null },
-      "tracking": { "type": "coupon_code", "param": "coupon" },
-      "expectedMetrics": { "clicks": false, "conversions": true, "earnings": true, "unpaidEarnings": true, "paidEarnings": true },
-      "notes": "Coupon-code tracking, so clicks are almost certainly not tracked at all. clicks:false means the UI renders n/a rather than 0 — do not let an adapter write 0 here."
+      "platform": {
+        "suspected": "unknown",
+        "confirmed": null
+      },
+      "tracking": {
+        "type": "coupon_code",
+        "param": "coupon"
+      },
+      "expectedMetrics": {
+        "clicks": false,
+        "conversions": true,
+        "earnings": true,
+        "unpaidEarnings": true,
+        "paidEarnings": true
+      },
+      "notes": "Coupon-code tracking, so clicks are almost certainly not tracked at all. clicks:false means the UI renders n/a rather than 0 \u2014 do not let an adapter write 0 here."
     }
   ]
 }

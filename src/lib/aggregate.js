@@ -11,20 +11,52 @@
  *   * Failed snapshots contribute their status, not their numbers.
  */
 
+function isNewer(row, current) {
+  if (!current) return true;
+  const a = String(row.captured_at);
+  const b = String(current.captured_at);
+  // Ties break on the higher id, so a manual correction entered in the same
+  // second as a scrape wins.
+  return a > b || (a === b && row.id > current.id);
+}
+
 /**
- * Reduce many rows to the newest row per program_key.
- * @param {Array<object>} rows snapshot rows (any order)
+ * Reduce many rows to the strictly newest row per program_key, failures
+ * included. This is "what happened most recently", used for the last-attempt
+ * status on a card.
  */
-export function latestPerProgram(rows) {
+export function newestPerProgram(rows) {
   const byProgram = new Map();
   for (const row of rows) {
-    const current = byProgram.get(row.program_key);
-    if (!current || String(row.captured_at) > String(current.captured_at) ||
-        (String(row.captured_at) === String(current.captured_at) && row.id > current.id)) {
-      byProgram.set(row.program_key, row);
-    }
+    if (isNewer(row, byProgram.get(row.program_key))) byProgram.set(row.program_key, row);
   }
   return [...byProgram.values()];
+}
+
+/**
+ * Reduce many rows to the best-known row per program_key: the newest snapshot
+ * that actually carries numbers, falling back to the newest failure when there
+ * are no numbers at all.
+ *
+ * A failed sync learns nothing about the day, so it must not erase what is
+ * already known. Without this rule, entering today's figures by hand at 09:00
+ * and then letting the 15:00 cron fail against the same site would wipe that
+ * program out of the combined totals.
+ */
+export function latestPerProgram(rows) {
+  const best = new Map();
+  const fallback = new Map();
+  for (const row of rows) {
+    if (row.status === 'failed') {
+      if (isNewer(row, fallback.get(row.program_key))) fallback.set(row.program_key, row);
+    } else if (isNewer(row, best.get(row.program_key))) {
+      best.set(row.program_key, row);
+    }
+  }
+  for (const [key, row] of fallback) {
+    if (!best.has(key)) best.set(key, row);
+  }
+  return [...best.values()];
 }
 
 /** Sum that preserves null: returns null only when every contribution is null. */

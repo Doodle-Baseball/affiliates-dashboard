@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  latestPerProgram, sumNullable, combineTotals, dailyEarningsSeries,
+  latestPerProgram, newestPerProgram, sumNullable, combineTotals, dailyEarningsSeries,
 } from '../src/lib/aggregate.js';
 
 const snapshot = (over = {}) => ({
@@ -44,6 +44,50 @@ describe('latestPerProgram', () => {
 
   it('returns an empty array for no rows', () => {
     expect(latestPerProgram([])).toEqual([]);
+  });
+
+  it('does not let a later failure erase a value already known for the day', () => {
+    // Manual entry at 09:00, then the 15:00 cron fails against the same site.
+    // The morning's numbers must survive.
+    const rows = [
+      snapshot({ id: 1, program_key: 'a', captured_at: '2026-09-02T09:00:00.000Z', source: 'manual', status: 'ok', earnings: 4200 }),
+      snapshot({ id: 2, program_key: 'a', captured_at: '2026-09-02T15:00:00.000Z', source: 'scrape', status: 'failed', earnings: null, error_message: 'login rejected' }),
+    ];
+    const latest = latestPerProgram(rows);
+    expect(latest).toHaveLength(1);
+    expect(latest[0].earnings).toBe(4200);
+    expect(latest[0].source).toBe('manual');
+  });
+
+  it('falls back to the newest failure when nothing succeeded', () => {
+    const rows = [
+      snapshot({ id: 1, program_key: 'a', captured_at: '2026-09-02T09:00:00.000Z', status: 'failed', error_message: 'timeout' }),
+      snapshot({ id: 2, program_key: 'a', captured_at: '2026-09-02T15:00:00.000Z', status: 'failed', error_message: 'login rejected' }),
+    ];
+    const latest = latestPerProgram(rows);
+    expect(latest).toHaveLength(1);
+    expect(latest[0].error_message).toBe('login rejected');
+  });
+
+  it('prefers a partial snapshot over a failure', () => {
+    const rows = [
+      snapshot({ id: 1, program_key: 'a', captured_at: '2026-09-02T09:00:00.000Z', status: 'partial', earnings: 100 }),
+      snapshot({ id: 2, program_key: 'a', captured_at: '2026-09-02T15:00:00.000Z', status: 'failed', earnings: null }),
+    ];
+    expect(latestPerProgram(rows)[0].earnings).toBe(100);
+  });
+});
+
+describe('newestPerProgram', () => {
+  it('reports the most recent attempt even when it failed', () => {
+    const rows = [
+      snapshot({ id: 1, program_key: 'a', captured_at: '2026-09-02T09:00:00.000Z', status: 'ok', earnings: 4200 }),
+      snapshot({ id: 2, program_key: 'a', captured_at: '2026-09-02T15:00:00.000Z', status: 'failed', error_message: 'login rejected' }),
+    ];
+    const newest = newestPerProgram(rows);
+    expect(newest).toHaveLength(1);
+    expect(newest[0].status).toBe('failed');
+    expect(newest[0].error_message).toBe('login rejected');
   });
 });
 

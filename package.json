@@ -3,13 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Unified affiliate earnings dashboard — scrapes five affiliate portals and shows today's numbers on one local page.",
-  "engines": { "node": ">=20.11" },
+  "description": "Unified affiliate earnings dashboard \u2014 scrapes five affiliate portals and shows today's numbers on one local page.",
+  "engines": {
+    "node": ">=20.11"
+  },
   "scripts": {
     "setup": "node src/scripts/setup.js",
     "migrate": "node src/scripts/migrate.js",
     "discover": "node src/scripts/discover.js",
     "sync": "node src/scripts/sync.js",
+    "server": "node src/server/index.js",
+    "dev": "concurrently -n api,web -c cyan,magenta \"node src/server/index.js\" \"vite --config web/vite.config.js\"",
+    "build": "vite build --config web/vite.config.js",
+    "start": "npm run build && node src/server/index.js",
     "test": "vitest run"
   },
   "dependencies": {
@@ -19,6 +25,11 @@
     "playwright": "^1.50.1"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^6.1.0",
     "vitest": "^3.0.5"
   }
 }

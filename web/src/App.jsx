@@ -8,13 +8,28 @@ import EarningsChart from './components/EarningsChart.jsx';
 import ManualEntry from './components/ManualEntry.jsx';
 import SyncPanel from './components/SyncPanel.jsx';
 
+/**
+ * Theme preference. Storage access can throw outright — a private window, or a
+ * browser set to block site data — so every read and write is guarded and the
+ * page renders correctly with no stored value.
+ */
 function useTheme() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'system');
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('theme') || 'system';
+    } catch {
+      return 'system';
+    }
+  });
   useEffect(() => {
     const root = document.documentElement;
     if (theme === 'system') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
+    try {
+      localStorage.setItem('theme', theme);
+    } catch {
+      /* preference simply does not persist */
+    }
   }, [theme]);
   return [theme, setTheme];
 }

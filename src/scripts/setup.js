@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { PATHS } from '../config/paths.js';
 import { loadPrograms, missingCredentials, settings } from '../config/index.js';
-import { migrate, closeDb } from '../db/index.js';
+import { migrate, closeDb, databaseUrl, isRemoteDatabase } from '../db/index.js';
 
 console.log('\nAffiliates dashboard — setup\n');
 
@@ -20,8 +20,9 @@ if (!fs.existsSync(path.join(PATHS.root, '.env'))) {
   console.log('\n  created .env from .env.example — fill in your passwords before syncing');
 }
 
-console.log('');
-const result = migrate({ log: (m) => console.log(`  db    ${m}`) });
+const url = databaseUrl();
+console.log(`\n  db    ${isRemoteDatabase() ? url.replace(/\/\/.*@/, '//…@') : url}`);
+const result = await migrate({ log: (m) => console.log(`  db    ${m}`) });
 if (result.applied.length === 0) console.log('  db    schema already up to date');
 
 const programs = loadPrograms();

@@ -9,7 +9,9 @@ gets an HTML dashboard behind a login form. So the data layer is authenticated
 scraping with Playwright, and **manual entry is a first-class path**, not a
 fallback bolted on: same table, same shape, same charts.
 
-Runs on `127.0.0.1` with no account system. Do not expose it to a network.
+Runs on `127.0.0.1` with no account system by default. It can also be deployed —
+see **[DEPLOY.md](DEPLOY.md)**, where a password is mandatory and the scraping
+stays on your machine, because a serverless host cannot run a browser.
 
 ---
 
@@ -106,6 +108,7 @@ your account figures.
 npm run sync                              # one headless run, then exit
 npm run sync -- --program=idun_peptides
 npm run sync -- --date=2026-09-01
+npm run sync -- --push                    # also push results to a deployed dashboard
 ```
 
 Programs run in parallel with a **concurrency cap of 2**. Each gets its own
@@ -136,9 +139,17 @@ hand — a manual entry is never overwritten by a later failed sync.
 
 ## How the data is stored
 
-SQLite at `data/affiliates.sqlite`, two tables, **append-only** — every
-snapshot is kept, so history accrues for free and a correction is a new row
-rather than an overwrite.
+SQLite, two tables, **append-only** — every snapshot is kept, so history
+accrues for free and a correction is a new row rather than an overwrite.
+
+Access goes through libSQL, which speaks the same SQLite dialect against either
+a local file or a hosted database. The schema and every query are identical in
+both, so your laptop and a deployment run the same code and differ only by URL:
+
+```
+local     (nothing set)              -> data/affiliates.sqlite
+deployed  DATABASE_URL=libsql://…    -> hosted, shared between both
+```
 
 **`snapshots`** — one row per program per sync
 
@@ -213,7 +224,10 @@ src/lib/fingerprint.js   which platform is this site running
 src/adapters/base.js     sessions, login, blocker detection, findStatByLabel
 src/adapters/*.js        one file per platform
 src/sync/runner.js       parallel runner, concurrency cap, error isolation
-src/server/              Express API (127.0.0.1 only)
+src/server/app.js        the Express app, with no listener attached
+src/server/index.js      binds it to 127.0.0.1 for local use
+src/server/auth.js       password sessions + the write-only ingest token
+api/index.js             the same app, as a Vercel serverless function
 src/scripts/             setup, migrate, discover, sync
 web/                     React UI (Vite)
 tests/                   money parser, aggregation, date parsing
@@ -225,10 +239,11 @@ tests/                   money parser, aggregation, date parsing
 npm test
 ```
 
-87 tests over the money parser (US and European formatting, negatives, sub-cent
+103 tests over the money parser (US and European formatting, negatives, sub-cent
 rounding, `C$` vs `$`, "not tracked" vs zero), the aggregation logic
 (latest-wins, null-preserving sums, failures excluded from totals and not
-clobbering known values) and date handling. No browser tests.
+clobbering known values) date handling, and the session tokens (expiry, tampering, secret rotation).
+No browser tests.
 
 ## API
 
@@ -244,7 +259,9 @@ All on `http://127.0.0.1:4317`. Money is in minor units.
 | `GET /api/runs` | recent sync runs |
 | `POST /api/manual` | manual entry (amounts in whole currency) |
 | `GET /api/sync/stream` | run a sync, stream per-program progress (SSE) |
-| `POST /api/sync` | run a sync, respond when finished |
+| `POST /api/sync` | run a sync, respond when finished (local only) |
+| `POST /api/login` | exchange the dashboard password for a session |
+| `POST /api/ingest` | accept snapshots pushed from a machine that has a browser |
 
 ## Current adapter status
 

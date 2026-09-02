@@ -1,0 +1,8 @@
+# Nothing in here belongs in a serverless bundle.
+data/
+research/
+logs/
+tests/
+.env
+.env.*
+!.env.example

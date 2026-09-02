@@ -16,17 +16,18 @@
     "dev": "concurrently -n api,web -c cyan,magenta \"node src/server/index.js\" \"vite --config web/vite.config.js\"",
     "build": "vite build --config web/vite.config.js",
     "start": "npm run build && node src/server/index.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "sync:push": "node src/scripts/sync.js --push"
   },
   "dependencies": {
-    "better-sqlite3": "^11.10.0",
+    "@libsql/client": "^0.18.0",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "playwright": "^1.50.1"
+    "express": "^4.21.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
+    "playwright": "^1.50.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "vite": "^6.1.0",

@@ -7,7 +7,6 @@
  * attached, and every other program still runs. Nothing here rethrows into the
  * caller's face — the run always finishes and always reports.
  */
-import { chromium } from 'playwright';
 import { EventEmitter } from 'node:events';
 import { getAdapter } from '../adapters/index.js';
 import { credentialsFor, missingCredentials, settings } from '../config/index.js';
@@ -50,8 +49,8 @@ async function syncOneProgram({ browser, browserError, program, runId, date, log
     adapter: adapter.name,
   });
 
-  const fail = (kind, message) => {
-    insertSnapshot({
+  const fail = async (kind, message) => {
+    await insertSnapshot({
       syncRunId: runId,
       programKey: program.key,
       date,
@@ -112,7 +111,7 @@ async function syncOneProgram({ browser, browserError, program, runId, date, log
     await saveSession(context, program.key).catch(() => {});
 
     const status = stats.status || 'ok';
-    const snapshotId = insertSnapshot({
+    const snapshotId = await insertSnapshot({
       syncRunId: runId,
       programKey: program.key,
       date,
@@ -132,7 +131,7 @@ async function syncOneProgram({ browser, browserError, program, runId, date, log
 
     // Adapters may also return other windows (AffiliateWP gives all-time).
     for (const extra of stats.additionalPeriods || []) {
-      insertSnapshot({
+      await insertSnapshot({
         syncRunId: runId,
         programKey: program.key,
         date,
@@ -203,7 +202,7 @@ export async function runSync({
     }
   };
 
-  const runId = startSyncRun({ trigger, programsAttempted: programs.length });
+  const runId = await startSyncRun({ trigger, programsAttempted: programs.length });
   log.info(`sync run ${runId} started`, { trigger, date: targetDate, programs: programs.length, concurrency });
   emit('run:start', { runId, date: targetDate, trigger, programs: programs.map((p) => ({ key: p.key, displayName: p.displayName, adapter: p.adapter })) });
 
@@ -217,6 +216,13 @@ export async function runSync({
     const needsBrowser = programs.some((p) => !getAdapter(p.adapter).manualOnly);
     if (needsBrowser) {
       try {
+        // Imported here rather than at module scope, through a specifier the
+        // bundler cannot resolve statically. The deployed API imports this file
+        // but never launches a browser, and tracing a literal 'playwright'
+        // import would pull Chromium's whole package into a serverless bundle
+        // that has no use for it — and no room for it.
+        const specifier = ['play', 'wright'].join('');
+        const { chromium } = await import(/* @vite-ignore */ specifier);
         browser = await chromium.launch({ headless: !settings.headed });
       } catch (error) {
         browserError = `browser launch failed: ${describeError(error).message}`;
@@ -232,7 +238,7 @@ export async function runSync({
   }
 
   const succeeded = results.filter((r) => r && r.status !== 'failed').length;
-  finishSyncRun(runId, {
+  await finishSyncRun(runId, {
     programsSucceeded: succeeded,
     notes: results
       .filter((r) => r && r.status === 'failed')

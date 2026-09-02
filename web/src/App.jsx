@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from './api.js';
+import { AuthRequiredError } from './api.js';
 import { seriesColor, humanDate, relativeTime } from './format.js';
 import Totals from './components/Totals.jsx';
 import ProgramCard from './components/ProgramCard.jsx';
@@ -7,6 +8,7 @@ import ProgramTable from './components/ProgramTable.jsx';
 import EarningsChart from './components/EarningsChart.jsx';
 import ManualEntry from './components/ManualEntry.jsx';
 import SyncPanel from './components/SyncPanel.jsx';
+import SignIn from './components/SignIn.jsx';
 
 /**
  * Theme preference. Storage access can throw outright — a private window, or a
@@ -42,6 +44,7 @@ export default function App() {
   const [error, setError] = useState(null);
   const [manualFor, setManualFor] = useState(null);
   const [sync, setSync] = useState({ running: false, programs: {} });
+  const [auth, setAuth] = useState(null);
   const closeStream = useRef(null);
 
   const load = useCallback(async (targetDate) => {
@@ -53,13 +56,37 @@ export default function App() {
       setDashboard(next);
       setChart(nextChart);
       setDate(next.date);
+      setAuth((previous) => ({ ...(previous || {}), signedIn: true }));
       setError(null);
     } catch (loadError) {
+      if (loadError instanceof AuthRequiredError) {
+        setAuth({ authRequired: true, signedIn: false });
+        return;
+      }
       setError(loadError.message);
     }
   }, []);
 
-  useEffect(() => { load(null); }, [load]);
+  useEffect(() => {
+    api.getAuth()
+      .then((next) => {
+        setAuth(next);
+        if (!next.authRequired || next.signedIn) load(null);
+      })
+      .catch(() => load(null));
+  }, [load]);
+
+  const signIn = async (password) => {
+    await api.login(password);
+    setAuth({ authRequired: true, signedIn: true });
+    await load(null);
+  };
+
+  const signOut = async () => {
+    await api.logout().catch(() => {});
+    setAuth({ authRequired: true, signedIn: false });
+    setDashboard(null);
+  };
   useEffect(() => () => closeStream.current?.(), []);
 
   /**
@@ -117,6 +144,10 @@ export default function App() {
     await load(date);
   };
 
+  if (auth?.authRequired && !auth.signedIn) {
+    return <SignIn onSubmit={signIn} />;
+  }
+
   if (error && !dashboard) {
     return (
       <div className="app">
@@ -132,6 +163,9 @@ export default function App() {
   if (!dashboard) return <div className="app"><div className="empty">Loading…</div></div>;
 
   const { totals, programs, isToday } = dashboard;
+  // A deployed dashboard has no browser, so it cannot scrape — the button would
+  // only ever return an error, so it is replaced with what to do instead.
+  const canSync = dashboard.canSync !== false;
 
   return (
     <div className="app">
@@ -164,9 +198,18 @@ export default function App() {
           >
             {theme === 'system' ? '◐' : theme === 'light' ? '☀' : '☾'}
           </button>
-          <button type="button" className="btn btn-primary" onClick={runSync} disabled={sync.running}>
-            {sync.running ? 'Syncing…' : 'Sync all'}
-          </button>
+          {canSync ? (
+            <button type="button" className="btn btn-primary" onClick={runSync} disabled={sync.running}>
+              {sync.running ? 'Syncing…' : 'Sync all'}
+            </button>
+          ) : (
+            <span className="remote-note" title="Scraping needs a browser, which this deployment does not have">
+              synced from your machine
+            </span>
+          )}
+          {auth?.authRequired && (
+            <button type="button" className="btn" onClick={signOut}>Sign out</button>
+          )}
         </div>
       </header>
 

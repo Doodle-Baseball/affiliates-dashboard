@@ -104,6 +104,28 @@ naming the reason, and the program should stay on `manual`.
   (87 tests); the adapters are not, because a test against markup nobody has
   seen would only assert my assumptions back at me.
 
+## Deployment
+
+The project now runs in two places from one codebase — see `DEPLOY.md`. The
+short version: Vercel cannot run Chromium or keep a file, so the dashboard, the
+API and manual entry deploy there against a hosted libSQL database, and
+`npm run sync` keeps scraping on your machine and writes to the same database
+(or posts to `/api/ingest`).
+
+Consequences worth knowing:
+
+- **A deployed instance refuses to serve without `DASHBOARD_PASSWORD`.** It
+  returns a 500 saying so. This is deliberate: the sync endpoints can drive
+  sign-ins to your affiliate accounts, so an open URL is not acceptable.
+- **Sessions are signed with that password.** Changing it invalidates every
+  existing session, by design.
+- **`INGEST_TOKEN` is write-only.** It can add snapshots and nothing else.
+- **The deployed UI has no "Sync all" button** — it has no browser, so the
+  button is replaced with "synced from your machine".
+- If you would rather run the whole thing, scraping included, in one place, a
+  container host (Fly, Railway, a VPS) runs this repo unchanged. That is a
+  smaller change than the Vercel split, not a bigger one.
+
 ## The first thing to do
 
 ```bash

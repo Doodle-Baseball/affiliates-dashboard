@@ -23,9 +23,18 @@ function rotateIfNeeded(file) {
  * Logger that writes to logs/<name>.log (rotating) and mirrors to the console.
  * Every sync run appends here so a cron failure is diagnosable after the fact.
  */
-export function createLogger(name = 'sync', { console: toConsole = true } = {}) {
-  fs.mkdirSync(PATHS.logs, { recursive: true });
-  const file = path.join(PATHS.logs, `${name}.log`);
+export function createLogger(name = 'sync', { console: toConsole = true, file: toFile = true } = {}) {
+  // A serverless filesystem is read-only, so file logging has to be optional;
+  // there, the platform's own log drain captures stdout instead.
+  let file = null;
+  if (toFile) {
+    try {
+      fs.mkdirSync(PATHS.logs, { recursive: true });
+      file = path.join(PATHS.logs, `${name}.log`);
+    } catch {
+      file = null;
+    }
+  }
 
   function write(level, message, meta) {
     const line = JSON.stringify({
@@ -34,8 +43,14 @@ export function createLogger(name = 'sync', { console: toConsole = true } = {}) 
       msg: message,
       ...(meta ? { meta } : {}),
     });
-    rotateIfNeeded(file);
-    fs.appendFileSync(file, `${line}\n`);
+    if (file) {
+      try {
+        rotateIfNeeded(file);
+        fs.appendFileSync(file, `${line}\n`);
+      } catch {
+        /* logging must never take down a request */
+      }
+    }
     if (toConsole) {
       const prefix = { info: '  ', warn: '! ', error: 'x ', debug: '. ' }[level] || '  ';
       const suffix = meta ? ` ${typeof meta === 'string' ? meta : JSON.stringify(meta)}` : '';

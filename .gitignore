@@ -1,0 +1,30 @@
+# --- secrets: never commit ---
+.env
+.env.local
+.env.*.local
+
+# --- browser session state (contains live login cookies) ---
+data/
+storage/
+cookies/
+
+# --- discovery artifacts: raw dashboard HTML may contain account data ---
+research/
+
+# --- logs ---
+logs/
+*.log
+npm-debug.log*
+
+# --- deps & build output ---
+node_modules/
+web/dist/
+dist/
+.vite/
+
+# --- os / editor cruft ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

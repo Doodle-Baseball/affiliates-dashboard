@@ -39,7 +39,7 @@ function describeError(error) {
   return { kind, message: message.slice(0, 500) };
 }
 
-async function syncOneProgram({ browser, program, runId, date, log, emit }) {
+async function syncOneProgram({ browser, browserError, program, runId, date, log, emit }) {
   const adapter = getAdapter(program.adapter);
   const credentials = credentialsFor(program);
   const started = Date.now();
@@ -82,6 +82,11 @@ async function syncOneProgram({ browser, program, runId, date, log, emit }) {
   const missing = missingCredentials(program);
   if (missing.length) {
     return fail('credentials', `missing ${missing.join(' and ')} in .env`);
+  }
+  // Checked after the manual/credential cases on purpose: a program that could
+  // never have scraped anyway should report why, not blame the browser.
+  if (!browser) {
+    return fail('browser', browserError || 'no browser available — run `npx playwright install chromium`');
   }
 
   let context;
@@ -203,29 +208,25 @@ export async function runSync({
   emit('run:start', { runId, date: targetDate, trigger, programs: programs.map((p) => ({ key: p.key, displayName: p.displayName, adapter: p.adapter })) });
 
   let browser = null;
+  let browserError = null;
   let results = [];
   try {
+    // A browser that will not start is one more reason a program can fail, not
+    // a reason to abandon the run: the manual-only programs still need to
+    // report their own status, and they need no browser to do it.
     const needsBrowser = programs.some((p) => !getAdapter(p.adapter).manualOnly);
     if (needsBrowser) {
-      browser = await chromium.launch({ headless: !settings.headed });
+      try {
+        browser = await chromium.launch({ headless: !settings.headed });
+      } catch (error) {
+        browserError = `browser launch failed: ${describeError(error).message}`;
+        log.error(`sync run ${runId}: ${browserError}`);
+      }
     }
 
     results = await pool(programs, Math.max(1, concurrency), (program) =>
-      syncOneProgram({ browser, program, runId, date: targetDate, log, emit }),
+      syncOneProgram({ browser, browserError, program, runId, date: targetDate, log, emit }),
     );
-  } catch (error) {
-    // Only reached if the browser itself could not start.
-    const { message } = describeError(error);
-    log.error(`sync run ${runId} could not start a browser: ${message}`);
-    for (const program of programs) {
-      if (results.some((r) => r?.programKey === program.key)) continue;
-      insertSnapshot({
-        syncRunId: runId, programKey: program.key, date: targetDate, period: 'today',
-        currency: program.currency || 'USD', source: 'scrape', status: 'failed',
-        errorMessage: `browser launch failed: ${message}`,
-      });
-      results.push({ programKey: program.key, status: 'failed', error: message });
-    }
   } finally {
     await browser?.close().catch(() => {});
   }

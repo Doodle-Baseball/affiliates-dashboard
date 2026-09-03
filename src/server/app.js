@@ -82,7 +82,12 @@ export function createApp({ serveStatic = true } = {}) {
   app.use((error, req, res, next) => {
     log.error(`unhandled: ${error.message}`, { path: req.path, stack: error.stack });
     if (res.headersSent) return next(error);
-    res.status(500).json({ error: error.message });
+    // A ConfigError carries a code the UI can turn into setup instructions,
+    // rather than showing the operator a stack trace they cannot act on.
+    res.status(error.status || 500).json({
+      error: error.message,
+      ...(error.code ? { code: error.code } : {}),
+    });
   });
 
   return app;

@@ -20,23 +20,82 @@ import { PATHS } from '../config/paths.js';
 
 let client = null;
 
+/** A configuration problem the operator can fix, as opposed to a bug. */
+export class ConfigError extends Error {
+  constructor(message, code) {
+    super(message);
+    this.name = 'ConfigError';
+    this.code = code;
+    this.status = 500;
+  }
+}
+
 export function databaseUrl() {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
   return `file:${PATHS.db}`;
+}
+
+/** Did an operator choose this database, or is it just the local default? */
+export function databaseUrlIsExplicit() {
+  return Boolean(process.env.DATABASE_URL);
 }
 
 export function isRemoteDatabase() {
   return !databaseUrl().startsWith('file:');
 }
 
+/**
+ * Are we inside a serverless function? There, the bundle directory is read-only
+ * and nothing written survives the request, so a file-backed database is never
+ * the right answer — it is a missing environment variable.
+ */
+export function isServerless() {
+  return Boolean(
+    process.env.VERCEL ||
+      process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      process.env.LAMBDA_TASK_ROOT ||
+      PATHS.root.startsWith('/var/task'),
+  );
+}
+
 export function getDb() {
   if (client) return client;
   const url = databaseUrl();
+
   if (url.startsWith('file:')) {
-    // Serverless filesystems are read-only outside /tmp, so a local file URL
-    // there is a configuration mistake worth catching early.
-    fs.mkdirSync(path.dirname(url.slice('file:'.length)), { recursive: true });
+    // Only the *unset* case is an error. An operator who deliberately points
+    // DATABASE_URL at a file on a serverless host has made a choice — an
+    // ephemeral /tmp database for a throwaway test is a legitimate one — and
+    // gets a warning rather than a refusal.
+    if (isServerless() && databaseUrlIsExplicit()) {
+      console.warn(
+        '[db] DATABASE_URL is a file on a serverless host: this database is per-instance ' +
+          'and is discarded when the instance goes away. Nothing you enter will persist.',
+      );
+    }
+    if (isServerless() && !databaseUrlIsExplicit()) {
+      // The old behaviour here was to try mkdir and surface the raw
+      // "ENOENT: mkdir '/var/task/data'", which names the symptom and not the
+      // cause. The cause is always the same, so say it.
+      throw new ConfigError(
+        'DATABASE_URL is not set on this deployment. A serverless host has no persistent disk, ' +
+          'so the dashboard needs a hosted database — create a free libSQL database and set ' +
+          'DATABASE_URL (and DATABASE_AUTH_TOKEN) in the environment, then redeploy. See DEPLOY.md.',
+        'DATABASE_NOT_CONFIGURED',
+      );
+    }
+    const dir = path.dirname(url.slice('file:'.length));
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch (error) {
+      throw new ConfigError(
+        `Cannot create the database directory at ${dir} (${error.code || error.message}). ` +
+          'Set DATABASE_URL to a writable location or a hosted libSQL database.',
+        'DATABASE_UNWRITABLE',
+      );
+    }
   }
+
   client = createClient({
     url,
     authToken: process.env.DATABASE_AUTH_TOKEN || undefined,

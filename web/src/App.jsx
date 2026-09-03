@@ -63,7 +63,7 @@ export default function App() {
         setAuth({ authRequired: true, signedIn: false });
         return;
       }
-      setError(loadError.message);
+      setError({ message: loadError.message, code: loadError.code || null });
     }
   }, []);
 
@@ -149,12 +149,44 @@ export default function App() {
   }
 
   if (error && !dashboard) {
+    const needsDatabase = error.code === 'DATABASE_NOT_CONFIGURED';
+    const local = typeof window !== 'undefined'
+      && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+
     return (
       <div className="app">
-        <div className="empty">
-          <p><strong>Could not reach the API.</strong></p>
-          <p>{error}</p>
-          <p>Is the server running? <code>npm run dev</code></p>
+        <div className="setup-card">
+          <h1>{needsDatabase ? 'One setting left' : 'Could not reach the API'}</h1>
+          <p className="setup-message">{error.message}</p>
+
+          {needsDatabase ? (
+            <>
+              <p className="setup-lead">A free one takes about a minute:</p>
+              <ol className="setup-steps">
+                <li>
+                  <code>turso db create affiliates</code>
+                  <span>Create the database (any libSQL/Turso database works).</span>
+                </li>
+                <li>
+                  <code>turso db show affiliates --url</code>
+                  <span>Set the result as <strong>DATABASE_URL</strong> in this deployment.</span>
+                </li>
+                <li>
+                  <code>turso db tokens create affiliates</code>
+                  <span>Set the result as <strong>DATABASE_AUTH_TOKEN</strong>.</span>
+                </li>
+                <li>
+                  <code>DATABASE_URL=… npm run migrate</code>
+                  <span>Create the tables, once, from your machine.</span>
+                </li>
+              </ol>
+              <p className="setup-foot">
+                Then redeploy. Full walkthrough in <strong>DEPLOY.md</strong>.
+              </p>
+            </>
+          ) : local ? (
+            <p className="setup-foot">Is the server running? <code>npm run dev</code></p>
+          ) : null}
         </div>
       </div>
     );

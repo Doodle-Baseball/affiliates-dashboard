@@ -9,7 +9,12 @@ const json = async (response) => {
   if (response.status === 401) throw new AuthRequiredError();
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.error || `${response.status} ${response.statusText}`);
+    const error = new Error(body.error || `${response.status} ${response.statusText}`);
+    // The server tags configuration problems so the UI can show what to fix
+    // rather than a bare message the reader cannot act on.
+    if (body.code) error.code = body.code;
+    error.status = response.status;
+    throw error;
   }
   return response.json();
 };

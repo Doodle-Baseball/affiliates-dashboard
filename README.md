@@ -11,7 +11,9 @@ fallback bolted on: same table, same shape, same charts.
 
 Runs on `127.0.0.1` with no account system by default. It can also be deployed —
 see **[DEPLOY.md](DEPLOY.md)**, where a password is mandatory and the scraping
-stays on your machine, because a serverless host cannot run a browser.
+stays on your machine, because a serverless host cannot run a browser. A
+deployment with nothing configured yet runs in demo mode: sample data, a banner
+saying so, and no password, because there is nothing real behind it.
 
 ---
 

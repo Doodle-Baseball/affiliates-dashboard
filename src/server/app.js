@@ -9,9 +9,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import express from 'express';
 import { PATHS } from '../config/paths.js';
-import { migrate } from '../db/index.js';
+import { migrate, isDemoMode } from '../db/index.js';
 import { createLogger } from '../lib/logger.js';
 import { createApi } from './api.js';
+import { loadPrograms } from '../config/index.js';
 import { isDeployed } from './auth.js';
 
 /**
@@ -23,10 +24,21 @@ function migrateOnce(log) {
   let started = null;
   return () => {
     if (!started) {
-      started = migrate({ log: (m) => log.info(m) }).catch((error) => {
-        started = null; // let the next request retry rather than wedging
-        throw error;
-      });
+      started = migrate({ log: (m) => log.info(m) })
+        .then(async () => {
+          // The demo database lives in memory, so every cold start begins
+          // empty and has to be filled before the first request is answered.
+          if (!isDemoMode()) return;
+          const { isEmpty, seedDemoData } = await import('../db/demo.js');
+          if (await isEmpty()) {
+            await seedDemoData(loadPrograms());
+            log.info('demo mode: seeded sample data (nothing here is real)');
+          }
+        })
+        .catch((error) => {
+          started = null; // let the next request retry rather than wedging
+          throw error;
+        });
     }
     return started;
   };

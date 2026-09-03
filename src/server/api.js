@@ -23,6 +23,7 @@ import {
   authConfig, checkPassword, checkIngestToken, issueToken, sessionCookie,
   clearCookie, requireAuth, isSignedIn, isDeployed,
 } from './auth.js';
+import { isDemoMode } from '../db/index.js';
 
 /** Express 4 does not catch rejected promises; this makes async handlers safe. */
 const route = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
@@ -90,7 +91,15 @@ export function createApi({ log }) {
 
   api.get('/auth', (req, res) => {
     const { enabled } = authConfig();
-    res.json({ authRequired: enabled, signedIn: isSignedIn(req), deployed: isDeployed() });
+    res.json({
+      // "enabled" is the honest answer: it is what requireAuth actually
+      // enforces. Reporting anything else lets the UI hide a sign-in screen
+      // that the API still demands.
+      authRequired: enabled,
+      signedIn: isSignedIn(req),
+      deployed: isDeployed(),
+      demo: isDemoMode(),
+    });
   });
 
   api.post('/login', (req, res) => {
@@ -209,6 +218,7 @@ export function createApi({ log }) {
       totals: combineTotals(best),
       programs,
       canSync: !isDeployed(),
+      demo: isDemoMode(),
       lastSyncedAt: newest.length ? newest.map((r) => r.captured_at).sort().slice(-1)[0] : null,
     });
   }));

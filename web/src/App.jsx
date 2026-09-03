@@ -245,6 +245,14 @@ export default function App() {
         </div>
       </header>
 
+      {dashboard.demo && (
+        <div className="demo-banner" role="status">
+          <strong>Demo data.</strong> None of these figures are real, and nothing you enter is
+          saved — this deployment has no database yet. Set <code>DATABASE_URL</code> in the
+          environment and redeploy to make it yours; <code>DEPLOY.md</code> has the four commands.
+        </div>
+      )}
+
       <Totals totals={totals} programCount={programs.length} isToday={isToday} />
 
       {Object.keys(sync.programs).length > 0 && (

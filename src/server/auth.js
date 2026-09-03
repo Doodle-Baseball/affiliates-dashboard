@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { isRemoteDatabase } from '../db/index.js';
+import { isRemoteDatabase, isDemoMode } from '../db/index.js';
 
 /**
  * Access control.
@@ -33,7 +33,10 @@ export function authConfig() {
     password,
     ingestToken,
     secret,
-    required: isDeployed(),
+    // Demo mode holds nothing but invented figures, so it does not need a
+    // password — and demanding one would leave the page dead, which is the
+    // whole problem demo mode exists to solve.
+    required: isDeployed() && !isDemoMode(),
     enabled: Boolean(password),
   };
 }

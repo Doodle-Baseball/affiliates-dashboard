@@ -58,8 +58,28 @@ export function isServerless() {
   );
 }
 
+/**
+ * Demo mode: a serverless deployment with no database configured.
+ *
+ * That combination used to be a 500. It is almost always someone who has just
+ * deployed and has not set DATABASE_URL yet, and showing them a dead page is
+ * a poor answer. Instead the instance runs an in-memory database seeded with
+ * obviously-sample figures, so the dashboard can be looked at and clicked
+ * through immediately. The UI says so in a banner that cannot be missed, and
+ * nothing is saved — set DATABASE_URL and it becomes a real dashboard.
+ */
+export function isDemoMode() {
+  return isServerless() && !databaseUrlIsExplicit();
+}
+
 export function getDb() {
   if (client) return client;
+
+  if (isDemoMode()) {
+    client = createClient({ url: ':memory:' });
+    return client;
+  }
+
   const url = databaseUrl();
 
   if (url.startsWith('file:')) {
@@ -71,17 +91,6 @@ export function getDb() {
       console.warn(
         '[db] DATABASE_URL is a file on a serverless host: this database is per-instance ' +
           'and is discarded when the instance goes away. Nothing you enter will persist.',
-      );
-    }
-    if (isServerless() && !databaseUrlIsExplicit()) {
-      // The old behaviour here was to try mkdir and surface the raw
-      // "ENOENT: mkdir '/var/task/data'", which names the symptom and not the
-      // cause. The cause is always the same, so say it.
-      throw new ConfigError(
-        'DATABASE_URL is not set on this deployment. A serverless host has no persistent disk, ' +
-          'so the dashboard needs a hosted database — create a free libSQL database and set ' +
-          'DATABASE_URL (and DATABASE_AUTH_TOKEN) in the environment, then redeploy. See DEPLOY.md.',
-        'DATABASE_NOT_CONFIGURED',
       );
     }
     const dir = path.dirname(url.slice('file:'.length));

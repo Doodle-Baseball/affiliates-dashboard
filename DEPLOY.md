@@ -28,6 +28,22 @@ so a program no scraper can reach is still a form you fill from anywhere.
 
 ---
 
+## 0. What you get before configuring anything
+
+Deploy with no environment variables at all and the dashboard **loads** rather
+than erroring. A serverless instance with no `DATABASE_URL` runs in **demo
+mode**: an in-memory database seeded with obviously-sample figures, so you can
+click through the cards, the table, the chart and the manual-entry form
+immediately. A banner across the top says the data is not real and nothing is
+saved, and every instance regenerates the same figures.
+
+Demo mode waives the dashboard password, which is only safe because there is
+nothing real behind it. **The moment `DATABASE_URL` is set, the password becomes
+mandatory again** — a deployment holding your actual earnings will not serve a
+single request without `DASHBOARD_PASSWORD`.
+
+Everything below turns the demo into your real dashboard.
+
 ## 1. Create the database
 
 Any libSQL/Turso database works, and the free tier is more than enough — this

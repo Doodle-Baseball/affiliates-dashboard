@@ -1,0 +1,54 @@
+name: CI
+
+# The credential check has to run here, not just locally: .env.example has twice
+# been filled in with real passwords through the GitHub web editor, where no
+# local hook or `npm test` ever runs. This makes the push itself go red.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  secrets:
+    name: No credentials in tracked files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: .env.example must contain no values
+        run: |
+          # Report key names only. A failure message must never echo the secret
+          # it just found — CI logs are as public as the repository.
+          leaked=$(grep -E '^[A-Za-z_][A-Za-z0-9_]*=.+' .env.example \
+                   | grep -vE '^(PORT|TIMEZONE|SYNC_CONCURRENCY|HEADED)=' \
+                   | cut -d= -f1 || true)
+          if [ -n "$leaked" ]; then
+            echo "::error::.env.example contains values for: $(echo "$leaked" | tr '\n' ' ')"
+            echo ""
+            echo "This file is tracked and this repository is public."
+            echo "Real values belong in .env, which is gitignored."
+            echo "Treat every key listed above as compromised and change it at the provider."
+            exit 1
+          fi
+          echo "OK - .env.example holds no credentials"
+
+      - name: .env must not be tracked
+        run: |
+          if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+            echo "::error::.env is tracked by git. It holds real credentials and must be ignored."
+            exit 1
+          fi
+          echo "OK - .env is not tracked"
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
